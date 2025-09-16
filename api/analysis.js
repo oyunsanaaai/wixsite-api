@@ -1,34 +1,42 @@
 export default async function handler(req, res) {
-  // зөвхөн POST
-  if (req.method !== "POST") return res.status(405).json({ ok:false, error:"Method not allowed" });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ ok: false, error: 'Only POST' });
+  }
 
-  // энгийн нууц шалгах
-  const auth = (req.headers.authorization || "").replace("Bearer ", "");
-  if (!auth || auth !== process.env.API_SECRET) return res.status(401).json({ ok:false, error:"Unauthorized" });
+  const auth = (req.headers.authorization || '').replace('Bearer ', '');
+  if (!auth || auth !== process.env.API_SECRET) {
+    return res.status(401).json({ ok: false, error: 'Unauthorized' });
+  }
 
   try {
     const b = req.body || {};
-    // Wix дээрх таны ID-уудтай тааруулж уншина
-    const name     = String(b.name     ?? b.nameInput     ?? "");
-    const age      = Number(b.age      ?? b.ageInput      ?? 0);
-    const gender   = String(b.gender   ?? b.genderInput   ?? "other");
-    const heightCm = Number(b.heightCm ?? b.heightInput   ?? 0);
-    const weightKg = Number(b.weightKg ?? b.weightInput   ?? 0);
 
-    if (!name || !age || !heightCm || !weightKg) {
-      return res.status(400).json({ ok:false, error:"Missing fields" });
+    const name   = String(b.nameInput   ?? '');
+    const age    = Number(b.ageInput    ?? 0);
+    const gender = String(b.genderInput ?? '');
+    const weight = Number(b.weightInput ?? 0); // kg
+    const height = Number(b.heightInput ?? 0); // cm
+
+    // Жишээ тооцоо: BMI
+    const hM = height / 100;
+    const bmi = hM > 0 ? +(weight / (hM * hM)).toFixed(1) : null;
+
+    let bmiMsg = 'Мэдээлэл дутуу';
+    if (bmi) {
+      if (bmi < 18.5) bmiMsg = 'Жингийн дутал';
+      else if (bmi < 25) bmiMsg = 'Хэвийн';
+      else if (bmi < 30) bmiMsg = 'Илүүдэл жин';
+      else bmiMsg = 'Таргалалт';
     }
 
-    // ЖИЖИГ тооцоо (жишээ)
-    const h = heightCm / 100;
-    const bmi = +(weightKg / (h*h)).toFixed(1);
-
     return res.status(200).json({
-      ok:true,
-      received:{ name, age, gender, heightCm, weightKg },
-      metrics:{ bmi }
+      ok: true,
+      summary: `${name} (${gender}, ${age}) – BMI: ${bmi ?? '—'} → ${bmiMsg}`,
+      bmi,
+      bmiMsg,
     });
   } catch (e) {
-    return res.status(500).json({ ok:false, error: e?.message || "Server error" });
+    console.error(e);
+    return res.status(500).json({ ok: false, error: 'Server error' });
   }
 }
