@@ -8,15 +8,13 @@ export default async function handler(req, res) {
   if (req.method !== 'POST')
     return res.status(405).json({ ok: false, error: 'Only POST' });
 
-  // Simple auth
   const auth = (req.headers.authorization || '').replace('Bearer ', '');
   if (!auth || auth !== process.env.API_SECRET)
     return res.status(401).json({ ok: false, error: 'Unauthorized' });
 
   const b = req.body || {};
   const hM = Number(b.heightInput || 0) / 100;
-  const w = Number(b.weightInput || 0);
-
+  const w  = Number(b.weightInput || 0);
   const bmi = hM > 0 ? Number((w / (hM * hM)).toFixed(1)) : null;
 
   let bmiMsg = 'Мэдээлэл дутуу';
@@ -27,5 +25,14 @@ export default async function handler(req, res) {
     else bmiMsg = 'Таргалалт';
   }
 
-  return res.status(200).json({ ok: true, bmi, bmiMsg });
+  const name   = String(b.nameInput || '');
+  const age    = Number(b.ageInput || 0);
+  const gender = String(b.genderInput || '');
+
+  return res.status(200).json({
+    ok: true,
+    bmi,
+    bmiMsg,
+    summary: `${name} (${gender}, ${age}) — BMI: ${bmi ?? '-'}, ${bmiMsg}`
+  });
 }
